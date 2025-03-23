@@ -47,19 +47,19 @@ waed list example.wasm
 Add a custom section with data from a file:
 
 ```bash
-waed add example.wasm -n "metadata" -f metadata.json -o output.wasm
+waed add -n "metadata" -f metadata.json -o output.wasm example.wasm 
 ```
 
 Extract a custom section to a file:
 
 ```bash
-waed get example.wasm -n "metadata" -o metadata.json
+waed get -n "metadata" -o metadata.json example.wasm 
 ```
 
 Display a custom section as a hex dump:
 
 ```bash
-waed get example.wasm -n "metadata" -x
+waed get -n "metadata" -x example.wasm 
 ```
 
 ## Library Example
