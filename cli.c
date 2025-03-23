@@ -71,27 +71,32 @@ uint8_t *read_file(const char *path, size_t *out_size)
     FILE *file = fopen(path, "rb");
     if (!file)
     {
-        fprintf(stderr, "Error: Could not open file %s\n", path);
+        fprintf(stderr, "Error: Could not open file %s: %s\n", path, strerror(errno));
         return NULL;
     }
 
     // Get file size
-    fseek(file, 0, SEEK_END);
+    if (fseek(file, 0, SEEK_END) != 0)
+    {
+        fprintf(stderr, "Error: Could not seek to end of file: %s\n", strerror(errno));
+        fclose(file);
+        return NULL;
+    }
+
     long file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
+
+    if (fseek(file, 0, SEEK_SET) != 0)
+    {
+        fprintf(stderr, "Error: Could not seek back to start of file: %s\n", strerror(errno));
+        fclose(file);
+        return NULL;
+    }
+
 
     if (file_size < 0)
     {
         fclose(file);
-        fprintf(stderr, "Error: Could not determine file size\n");
-        return NULL;
-    }
-
-    // Check for extreme file sizes
-    if (file_size > (long)SIZE_MAX)
-    {
-        fclose(file);
-        fprintf(stderr, "Error: File too large\n");
+        fprintf(stderr, "Error: Could not determine file size: %s\n", strerror(errno));
         return NULL;
     }
 
@@ -100,7 +105,7 @@ uint8_t *read_file(const char *path, size_t *out_size)
     if (!buffer)
     {
         fclose(file);
-        fprintf(stderr, "Error: Memory allocation failed\n");
+        fprintf(stderr, "Error: Memory allocation failed for %ld bytes\n", file_size);
         return NULL;
     }
 
@@ -110,7 +115,8 @@ uint8_t *read_file(const char *path, size_t *out_size)
     if (bytes_read != (size_t)file_size)
     {
         free(buffer);
-        fprintf(stderr, "Error: Could not read entire file\n");
+        fprintf(stderr, "Error: Could not read entire file (read %zu of %ld bytes): %s\n",
+                bytes_read, file_size, strerror(errno));
         return NULL;
     }
 
@@ -130,7 +136,7 @@ int write_file(const char *path, const uint8_t *data, size_t size)
     FILE *file = fopen(path, "wb");
     if (!file)
     {
-        fprintf(stderr, "Error: Could not open file %s for writing\n", path);
+        fprintf(stderr, "Error: Could not open file %s for writing: %s\n", path, strerror(errno));
         return 0;
     }
 
@@ -139,7 +145,7 @@ int write_file(const char *path, const uint8_t *data, size_t size)
 
     if (bytes_written != size)
     {
-        fprintf(stderr, "Error: Could not write entire content to file\n");
+        fprintf(stderr, "Error: Could not write entire content to file: %s\n", strerror(errno));
         return 0;
     }
 
@@ -419,6 +425,9 @@ int main(int argc, char *argv[])
     int opt;
     int option_index = 0;
 
+    // Reset getopt
+    optind = 1;
+
     while ((opt = getopt_long(argc, argv, "hvx::n:o:f:", long_options, &option_index)) != -1)
     {
         switch (opt)
@@ -437,6 +446,7 @@ int main(int argc, char *argv[])
             }
             break;
         case 'n':
+            free(section_name); // Free any previous allocation
             section_name = safe_strdup(optarg);
             if (!section_name && optarg)
             {
@@ -445,6 +455,7 @@ int main(int argc, char *argv[])
             }
             break;
         case 'o':
+            free(output_file); // Free any previous allocation
             output_file = safe_strdup(optarg);
             if (!output_file && optarg)
             {
@@ -454,6 +465,7 @@ int main(int argc, char *argv[])
             }
             break;
         case 'f':
+            free(input_file); // Free any previous allocation
             input_file = safe_strdup(optarg);
             if (!input_file && optarg)
             {
@@ -498,6 +510,7 @@ int main(int argc, char *argv[])
     }
 
     const char *wasm_file = argv[optind];
+
     int result = 1; // Default to error
 
     // Command-specific validation and execution
@@ -583,6 +596,10 @@ cleanup:
     free(section_name);
     free(input_file);
     if (should_free_output_file)
+    {
+        free(output_file);
+    }
+    else
     {
         free(output_file);
     }
