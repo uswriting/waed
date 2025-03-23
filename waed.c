@@ -1231,45 +1231,17 @@ waed_error_t waed_module_add_custom_section(waed_module_t *module,
     }
 
     // First check if a section with this name already exists
-    size_t existing_index = SIZE_MAX;
     for (size_t i = 0; i < module->custom_section_count; i++)
     {
-        if (strncmp(module->custom_sections[i].name, name, WAED_MAX_NAME_LENGTH) == 0)
+        if (module->custom_sections[i].name != NULL &&
+            strcmp(module->custom_sections[i].name, name) == 0)
         {
-            existing_index = i;
-            break;
+            snprintf(error_message, sizeof(error_message),
+                     "Custom section '%s' already exists", name);
+            return WAED_ERROR_DUPLICATE_SECTION;
         }
     }
 
-    // If section already exists, update it
-    if (existing_index != SIZE_MAX)
-    {
-        custom_section_impl_t *section = &module->custom_sections[existing_index];
-
-        // Free the old content
-        free(section->content);
-
-        // Allocate and copy the new content
-        if (content_size > 0)
-        {
-            section->content = malloc(content_size);
-            if (section->content == NULL)
-            {
-                snprintf(error_message, sizeof(error_message), "Memory allocation failed");
-                return WAED_ERROR_MEMORY_ALLOCATION;
-            }
-            memcpy(section->content, content, content_size);
-        }
-        else
-        {
-            section->content = NULL;
-        }
-
-        section->content_size = content_size;
-        return WAED_SUCCESS;
-    }
-
-    // Otherwise, add a new section
     // Grow the custom sections array
     size_t new_count = module->custom_section_count + 1;
     custom_section_impl_t *new_sections = realloc(module->custom_sections,

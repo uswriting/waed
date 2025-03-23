@@ -250,7 +250,14 @@ int cmd_add_section(const char *wasm_file, const char *input_file, const char *s
     // Add the custom section
     result = waed_module_add_custom_section(module, section_name, data, data_size);
 
-    if (result != WAED_SUCCESS)
+    if (result == WAED_ERROR_DUPLICATE_SECTION)
+    {
+        fprintf(stderr, "Error: Section '%s' already exists in the module\n", section_name);
+        free(data);
+        waed_module_destroy(module);
+        return 1;
+    }
+    else if (result != WAED_SUCCESS)
     {
         fprintf(stderr, "Error adding custom section: %s\n", waed_get_error_message());
         free(data);
