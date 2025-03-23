@@ -3,6 +3,7 @@ on:
   push:
     tags:
       - 'v*'
+
 jobs:
   build-linux-x86_64:
     runs-on: ubuntu-24.04
@@ -12,14 +13,14 @@ jobs:
         run: make
       - name: Package artifact
         run: |
-         ls
-         tar -czf waed-linux-x86_64.tar.gz ./waed
+          ls
+          tar -czf waed-linux-x86_64.tar.gz ./waed
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: waed-linux-x86_64
           path: waed-linux-x86_64.tar.gz
-  
+
   build-linux-arm64:
     runs-on: ubuntu-24.04-arm
     steps:
@@ -33,7 +34,7 @@ jobs:
         with:
           name: waed-linux-arm64
           path: waed-linux-arm64.tar.gz
-  
+
   build-macos:
     runs-on: macos-latest
     steps:
@@ -47,17 +48,19 @@ jobs:
         with:
           name: waed-macos
           path: waed-macos-arm64.tar.gz
-  
+
   release:
     needs: [build-linux-x86_64, build-linux-arm64, build-macos]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: artifacts/**/*
           generate_release_notes: true
